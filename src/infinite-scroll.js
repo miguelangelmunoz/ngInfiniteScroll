@@ -15,6 +15,7 @@ angular.module(MODULE_NAME, [])
       infiniteScrollDisabled: '=',
       infiniteScrollUseDocumentBottom: '=',
       infiniteScrollListenForEvent: '@',
+      infiniteScrollExecuteApply: '=',
     },
 
     link(scope, elem, attrs) {
@@ -28,6 +29,11 @@ angular.module(MODULE_NAME, [])
       let useDocumentBottom = false;
       let unregisterEventListener = null;
       let checkInterval = false;
+      let infiniteScrollExecuteApply = true;
+
+      if (scope.infiniteScrollExecuteApply !== undefined) {
+        infiniteScrollExecuteApply = !!scope.infiniteScrollExecuteApply;
+      }
 
       function height(element) {
         const el = element[0] || element;
@@ -86,7 +92,7 @@ angular.module(MODULE_NAME, [])
           checkWhenEnabled = true;
 
           if (scrollEnabled) {
-            if (scope.$$phase || $rootScope.$$phase) {
+            if (scope.$$phase || $rootScope.$$phase || !infiniteScrollExecuteApply) {
               scope.infiniteScroll();
             } else {
               scope.$apply(scope.infiniteScroll);

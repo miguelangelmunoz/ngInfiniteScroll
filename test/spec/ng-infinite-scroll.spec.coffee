@@ -1,7 +1,7 @@
 fs = require "fs"
 mkdirp = require "mkdirp"
 
-getTemplate = (angularVersion, container, attrs, throttle) ->
+getTemplate = (angularVersion, container, attrs, throttle, callApply) ->
   """
     <!doctype html>
     <head>
@@ -13,6 +13,7 @@ getTemplate = (angularVersion, container, attrs, throttle) ->
       <script src='http://ajax.googleapis.com/ajax/libs/angularjs/#{angularVersion}/angular.min.js'></script>
       <script src="../../build/ng-infinite-scroll.js"></script>
       <script>
+        var callApply = !!#{callApply};
         angular.module('app', ['infinite-scroll'])
           .config(function ($provide) {
             $provide.value('THROTTLE_MILLISECONDS', #{throttle});
@@ -21,6 +22,9 @@ getTemplate = (angularVersion, container, attrs, throttle) ->
             $rootScope.items = [];
             $rootScope.loadMore = function () {
               [].push.apply($rootScope.items, new Array(100));
+              if (callApply) {
+                $rootScope.$apply($rootScope.infiniteScroll);
+              }
             };
 
             $rootScope.busy = true;
@@ -110,9 +114,9 @@ describe "ng-infinite-scroll", ->
       for container in ["window", "ancestor", "parent"]
         describe "with #{container} as container", ->
 
-          replaceIndexFile = (attrs, throttle) ->
+          replaceIndexFile = (attrs, throttle, callApply) ->
             mkdirp.sync tmpDir
-            fs.writeFileSync(pathToDocument, getTemplate(angularVersion, container, attrs, throttle))
+            fs.writeFileSync(pathToDocument, getTemplate(angularVersion, container, attrs, throttle, callApply))
 
           describe "without throttling", ->
 
@@ -148,6 +152,27 @@ describe "ng-infinite-scroll", ->
               browser.driver.executeScript(scrollToLastScreenScript(container, -20))
               expect(getItems().count()).toBe 100
               browser.driver.executeScript(scrollToLastScreenScript(container, 20))
+              expect(getItems().count()).toBe 200
+
+            it "does not render new items if infinite-scroll-execute-apply is set to false", ->
+              replaceIndexFile "infinite-scroll-execute-apply='false'", throttle
+              browser.get pathToDocument
+              expect(getItems().count()).toBe 100
+              browser.driver.executeScript(scrollToBottomScript(container))
+              expect(getItems().count()).toBe 100
+
+            it "renders new items if infinite-scroll-execute-apply is set to true", ->
+              replaceIndexFile "infinite-scroll-execute-apply='true'", throttle
+              browser.get pathToDocument
+              expect(getItems().count()).toBe 100
+              browser.driver.executeScript(scrollToBottomScript(container))
+              expect(getItems().count()).toBe 200
+
+            it "renders new items if infinite-scroll-execute-apply is set to false and we call $apply outside the handler", ->
+              replaceIndexFile "infinite-scroll-execute-apply='true'", throttle, true
+              browser.get pathToDocument
+              expect(getItems().count()).toBe 100
+              browser.driver.executeScript(scrollToBottomScript(container))
               expect(getItems().count()).toBe 200
 
             describe "with an event handler", ->
