@@ -169,7 +169,7 @@ describe "ng-infinite-scroll", ->
               expect(getItems().count()).toBe 200
 
             it "renders new items if infinite-scroll-execute-apply is set to false and we call $apply outside the handler", ->
-              replaceIndexFile "infinite-scroll-execute-apply='true'", throttle, true
+              replaceIndexFile "infinite-scroll-execute-apply='false'", throttle, true
               browser.get pathToDocument
               expect(getItems().count()).toBe 100
               browser.driver.executeScript(scrollToBottomScript(container))
